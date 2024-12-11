@@ -29,77 +29,149 @@ contract SonikDropTest is GetProof {
     bytes32 hash = keccak256("claimed sonik droppppppppppp");
 
     function setUp() public {
-        owner = address(this);
+        owner = msg.sender;
         testToken = new TestERC20();
-        sonikDrop = new SonikDrop(owner, address(testToken), merkleRoot, address(0), 0, 10);
-        testToken.transfer(address(sonikDrop), 20 ether);
+        sonikDrop = new SonikDrop(msg.sender, address(testToken), merkleRoot, address(0), 0, 10);
+        emit log_address(owner);
+        testToken.transfer(address(sonikDrop), 25 ether);
         (user1, keyUser1) = makeAddrAndKey("user1");
         (user2, keyUser2) = makeAddrAndKey("user2");
         (badUser, keybadUser) = makeAddrAndKey("badUser");
     }
 
-    function test_ClaimAirdrop() public {
+    //// public/ external  view functions
+
+    function test_getContractBalance() public {
+        assertEq(sonikDrop.getContractBalance(), 25 ether);
+    }
+
+    function test_hasAidropTimeEnded() public {
+        //  the airdrop is not time locked by default
+        vm.warp(block.timestamp + 1);
+        assertEq(sonikDrop.hasAirdropTimeEnded(), true);
+    }
+
+    function test_hasAidropTimeEndedWithTimeLock() public {
+        vm.prank(owner);
+        sonikDrop.updateClaimTime(1 days);
+        assertEq(sonikDrop.hasAirdropTimeEnded(), false);
+    }
+
+    function test_hasAidropTimeEndedWithTimeLockTrue() public {
+        vm.prank(owner);
+        sonikDrop.updateClaimTime(1 days);
+
+        vm.warp(block.timestamp + 2 days);
+        assertEq(sonikDrop.hasAirdropTimeEnded(), true);
+    }
+
+    function test_checkEligibility() public {
+        bytes32[] memory proof = getProof(user1);
+        vm.prank(user1);
+        assertEq(sonikDrop.checkEligibility(10 ether, proof), true);
+    }
+
+    function test_checkEligibility_wrong_value() public {
+        bytes32[] memory proof = getProof(user1);
+        vm.prank(user1);
+        assertEq(sonikDrop.checkEligibility(69 ether, proof), false);
+    }
+
+    function test_checkEligibility_wrong_proof() public {
+        bytes32[] memory proof = getProof(user2);
+
+        // using user 1 proof to check user2 eligitbity
+        vm.prank(user1);
+        assertEq(sonikDrop.checkEligibility(10 ether, proof), false);
+    }
+
+    //// Owned   functions
+
+    function test_updateClaimTime() public {
+        vm.prank(owner);
+        sonikDrop.updateClaimTime(1 days);
+        assertEq(sonikDrop.isTimeLocked(), true);
+        assertEq(sonikDrop.airdropEndTime(), block.timestamp + 1 days);
+    }
+
+    function test_updateClaimTime_notOwner() public {
+        vm.startPrank(user1);
+
+        vm.expectRevert(abi.encodeWithSignature("UnAuthorizedFunctionCall()"));
+
+        sonikDrop.updateClaimTime(1 days);
+        assertEq(sonikDrop.isTimeLocked(), false);
+
+        vm.stopPrank();
+    }
+
+    function test_claimAirdrop() public {
         bytes32[] memory proof = getProof(user1);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(keyUser1, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
-        emit log_address(msg.sender);
-        vm.prank(user1);
+
+        vm.startPrank(user1);
         sonikDrop.claimAirdrop(10e18, proof, hash, signature);
         assertEq(testToken.balanceOf(user1), 10e18);
     }
 
-    function test_ClaimAirdrop_DuplicateClaim() external {
+    function test_claimAirdrop_duplicateClaim() external {
         bytes32[] memory proof = getProof(user1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(keyUser1, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // First claim
-        vm.prank(user1);
+        vm.startPrank(user1);
         sonikDrop.claimAirdrop(10e18, proof, hash, signature);
 
         // Attempt to claim again
-        vm.expectRevert(abi.encodeWithSignature("HasClaimedRewardsAlready()"));
-        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSignature("InvalidClaim()"));
         sonikDrop.claimAirdrop(10e18, proof, hash, signature);
+        vm.stopPrank();
     }
 
     function test_ClaimAirdrop_InvalidProof() external {
         // Generating an invalid proof for user2
+
+        vm.startPrank(user2);
         bytes32[] memory invalidProof = new bytes32[](0);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(keyUser2, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.expectRevert(abi.encodeWithSignature("InvalidClaim()"));
-        vm.prank(user2);
         sonikDrop.claimAirdrop(10e18, invalidProof, hash, signature);
+        vm.stopPrank();
     }
 
     function test_ClaimAirdrop_InsufficientFunds() external {
-        test_ClaimAirdrop();
+        test_claimAirdrop();
 
         // Attempt to claim more than the available balance
         vm.expectRevert(abi.encodeWithSignature("InsufficientContractBalance()"));
-        vm.prank(user2);
+        vm.startPrank(user2);
         bytes32[] memory proof = getProof(user2);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(keyUser2, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
         sonikDrop.claimAirdrop(20e18, proof, hash, signature);
+        vm.stopPrank();
     }
 
     function test_ClaimAirdrop_TimeLock() external {
         // Set a claim time to test time-lock functionality
-        sonikDrop.updateClaimTime(10);
+        vm.prank(owner);
+        sonikDrop.updateClaimTime(1 days);
 
+        vm.startPrank(user2);
         bytes32[] memory proof = getProof(user2);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(keyUser2, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Fast forward time to simulate claim after time-lock
-        vm.warp(block.timestamp + 1232); // Move time forward by 11 seconds
-
-        vm.prank(user2);
+        vm.warp(block.timestamp + 2 days);
         vm.expectRevert(abi.encodeWithSignature("AirdropClaimEnded()"));
+
         sonikDrop.claimAirdrop(20e18, proof, hash, signature);
+        vm.stopPrank();
     }
 }

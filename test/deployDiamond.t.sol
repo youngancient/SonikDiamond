@@ -5,22 +5,11 @@ import "../contracts/interfaces/IDiamondCut.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/OwnershipFacet.sol";
-import {AirdropFactoryFacet} from "../contracts/facets/erc20facets/FactoryFacet.sol";
-import {SonikDrop} from "../contracts/facets/erc20facets/SonikDrop.sol";
 import "../contracts/Diamond.sol";
-
 import "./helpers/DiamondUtils.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TestERC20 is ERC20 {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        _mint(msg.sender, 100000e18);
-    }
-
-    function mint(address to, uint256 amount) public {
-        _mint(to, amount);
-    }
-}
+import {AirdropFactoryFacet} from "../contracts/facets/erc20facets/FactoryFacet.sol";
+import {PoapFactoryFacet} from "../contracts/facets/erc721facets/PoapFactoryFacet.sol";
 
 contract DiamondDeployer is DiamondUtils, IDiamondCut {
     //contract types of facets to be deployed
@@ -29,11 +18,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     DiamondLoupeFacet dLoupe;
     OwnershipFacet ownerF;
     AirdropFactoryFacet factoryF;
-    SonikDrop sonikDropF;
-
-    TestERC20 shibuyaToken;
-
-    address owner = makeAddr("youngancient");
+    PoapFactoryFacet poapFactoryF;
 
     function setUp() public {
         //deploy facets
@@ -42,12 +27,12 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         diamond = new Diamond(address(this), address(dCutFacet));
         dLoupe = new DiamondLoupeFacet();
         ownerF = new OwnershipFacet();
-
+        poapFactoryF = new PoapFactoryFacet();
         factoryF = new AirdropFactoryFacet();
         //upgrade diamond with facets
 
         //build cut struct
-        FacetCut[] memory cut = new FacetCut[](3);
+        FacetCut[] memory cut = new FacetCut[](4);
 
         cut[0] = (
             FacetCut({
@@ -70,6 +55,13 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
                 facetAddress: address(factoryF),
                 action: FacetCutAction.Add,
                 functionSelectors: generateSelectors("AirdropFactoryFacet")
+            })
+        );
+        cut[3] = (
+            FacetCut({
+                facetAddress: address(factoryF),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("PoapFactoryFacet")
             })
         );
 
@@ -122,10 +114,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         // should we make the sonikFacet depend on diamond or have it's own storage
     }
 
-    function testCreateSonikDrop() public {
-        //call createSonikDrop
-        // factoryF.createSonikDrop();
-    }
+    function testDiamond() public {}
 
     function diamondCut(FacetCut[] calldata _diamondCut, address _init, bytes calldata _calldata) external override {}
 }

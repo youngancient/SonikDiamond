@@ -36,53 +36,6 @@ library LibDiamond {
         uint256 facetAddressPosition; // position of facetAddress in facetAddresses array
     }
 
-    struct SonikDropObj {
-        uint256 id;
-        address tokenAddress;
-        bool isNftRequired;
-        bool isTimeLocked;
-        address nftAddress;
-        address contractAddress;
-        address owner;
-        bytes32 merkleRoot;
-        uint256 claimTime;
-        uint256 airdropEndTime;
-        uint256 totalAmountSpent;
-        uint256 totalNoOfClaimers;
-        uint256 totalNoOfClaimed;
-    }
-
-    struct SonikPoapObj {
-        // the merkle tree root
-        bytes32 merkleRoot;
-        // a mapping to keep track of the Mint state of a particular address
-
-        // Token name
-        string _name;
-        // Token symbol
-        string _symbol;
-        // base token Uri
-        string baseURI;
-        // index
-        uint256 index;
-        mapping(uint256 tokenId => address) _owners;
-        mapping(address owner => uint256) _balances;
-        mapping(uint256 tokenId => address) _tokenApprovals;
-        mapping(address owner => mapping(address operator => bool)) _operatorApprovals;
-        mapping(address => bool) hasUserClaimedAirdrop;
-        bool isNftRequired;
-        bool isTimeLocked;
-        bool isTokenInitialized;
-        address nftAddress;
-        address contractAddress;
-        address owner;
-        uint256 claimTime;
-        uint256 airdropEndTime;
-        uint256 totalAmountSpent;
-        uint256 totalNoOfClaimers;
-        uint256 totalNoOfClaimed;
-    }
-
     struct DiamondStorage {
         // maps function selector to the facet address and
         // the position of the selector in the facetFunctionSelectors.selectors array
@@ -99,17 +52,10 @@ library LibDiamond {
         /*==================== Sonik Token Airdrop Storage ====================*/
         uint256 cloneCount;
         mapping(address => address[]) ownerToSonikDropCloneContracts;
-        mapping(address => SonikDropObj) sonikContractToObj;
         address[] allSonikDropClones;
-        // maps user address => sonik contract address => bool
-        // hasUserClaimedAirdrop[user][sonikCloneContract] -> bool
-
-        //TODO why not in the sonik obj
-        mapping(address => mapping(address => bool)) hasUserClaimedAirdrop;
         /*==================== Sonik POAP Airdrop Storage ====================*/
         uint256 clonePoapCount;
         mapping(address => address[]) ownerToSonikPoapCloneContracts;
-        mapping(address => SonikPoapObj) sonikContractToPoapObj;
         address[] allSonikPoapClones;
     }
 

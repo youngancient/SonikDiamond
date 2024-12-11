@@ -67,17 +67,6 @@ contract AirdropFactoryFacet {
         return _createSonikDrop(_tokenAddress, _merkleRoot, address(0), 0, _noOfClaimers, _totalOutputTokens);
     }
 
-    // function getOwnerSonikDropClones(address _owner) external view returns (LibDiamond.SonikDropObj[] memory) {
-    //     LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-    //     address[] memory cloneContractAddresses = ds.ownerToSonikDropCloneContracts[_owner];
-
-    //     LibDiamond.SonikDropObj[] memory sonikDropObjs = new LibDiamond.SonikDropObj[](cloneContractAddresses.length);
-    //     for (uint256 i = 0; i < cloneContractAddresses.length; i++) {
-    //         sonikDropObjs[i] = ds.sonikContractToObj[cloneContractAddresses[i]];
-    //     }
-    //     return sonikDropObjs;
-    // }
-
     function getOwnerSonikDropClones(address _owner) external view returns (address[] memory) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         return ds.ownerToSonikDropCloneContracts[_owner];
@@ -87,14 +76,4 @@ contract AirdropFactoryFacet {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
         return ds.allSonikDropClones;
     }
-
-    // function readSonikClone(address _sonikAddress) external view returns (LibDiamond.SonikDropObj memory) {
-    //     LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-    //     return ds.sonikContractToObj[_sonikAddress];
-    // }
-
-    // function isAddressClone(address _sonikAddress) external view returns (bool) {
-    //     LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-    //     return ds.sonikContractToObj[_sonikAddress].tokenAddress != address(0);
-    // }
 }
